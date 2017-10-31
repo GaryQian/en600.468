@@ -93,7 +93,6 @@ def main(options):
         train_out_batch = train_out_batch.cuda()
         train_in_mask = train_in_mask.cuda()
         train_out_mask = train_out_mask.cuda()
-
       sys_out_batch = rnnlm(train_in_batch)  # (seq_len, batch_size, vocab_size) # TODO: substitute this with your module
       train_in_mask = train_in_mask.view(-1)
       train_in_mask = train_in_mask.unsqueeze(1).expand(len(train_in_mask), vocab_size)
@@ -105,7 +104,7 @@ def main(options):
       loss = criterion(sys_out_batch, train_out_batch)
       logging.debug("loss at batch {0}: {1}".format(i, loss.data[0]))
       optimizer.zero_grad()
-      loss.backward()
+      loss.backward(retain_graph=True)
       optimizer.step()
 
     # validation -- this is a crude esitmation because there might be some paddings at the end
