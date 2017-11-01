@@ -1,9 +1,10 @@
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
+from torch.nn import Parameter
 import numpy as np
 
-import torch.nn.functional as F
+import torch.tanh
 
 # TODO: Your implementation goes here
 class RNNLM(nn.Module):
@@ -13,32 +14,20 @@ class RNNLM(nn.Module):
     #word embedding (vocab_size, embedding_dimension)
     embedding_size = 15
     self.vocab_size = vocab_size
-    self.we = nn.Linear(vocab_size, embedding_size)  # random word embedding
+    self.we = Parameter(torch.randn(vocab_size, embedding_size))  # random word embedding
     
     self.hidden_size = embedding_size
-    self.hidden = Variable(torch.randn(embedding_size))
+    self.hidden = Parameter(torch.randn(embedding_size))
 
-    self.i2h = nn.Linear(embedding_size + embedding_size, embedding_size)
-    self.i2o = nn.Linear(embedding_size + embedding_size, vocab_size)
-    
-    
-    self.softmax = nn.LogSoftmax()
+    self.i2h = Parameter(torch.randn(embedding_size + self.hidden_size, self.hidden_size))
+    self.i2o = Parameter(torch.randn(embedding_size + self.hidden_size, vocab_size))
 
   def forward(self, input):
-    onehot = np.zeros((len(input), self.vocab_size))
-    for i,v in enumerate(input.data.numpy()):
-      onehot[i][v] = 1
-    for n in range(len(input)):
-      #TODO (D L E W I S) Make this more efficient by not using np to make a onehot
-      oh = Variable(torch.from_numpy(onehot[n,:]).type(torch.FloatTensor))
-      oh = np.zeros((self.vocab_size,))#Variable(torch.zeros((len(input), self.vocab_size)))
-      oh = Variable(torch.from_numpy(oh).type(torch.FloatTensor))
-      #END TODO
-      we = self.we(oh)
-      combined = torch.cat((we, self.hidden), 0)
-      self.hidden = F.tanh(self.i2h(combined))
-      output = F.tanh(self.i2o(combined))
-      output = self.softmax(output)
+    for emb in self.we[input,:]:
+      combined = torch.cat((emb, self.hidden), 0)
+      self.hidden = torch.tanh(torch.mm(combined, self.i2h))
+      output = torch.exp(torch.tanh(torch.mm(combined, self.i2o)))
+      output = torch.div(output,torch.sum(output))
     return output
 
 
