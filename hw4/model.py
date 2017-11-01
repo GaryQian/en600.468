@@ -25,6 +25,12 @@ class RNNLM(nn.Module):
     self.softmax = nn.LogSoftmax()
 
   def forward(self, input):
+    #input = input concat self.hidden
+    
+    #self.hidden = torch.tanh(sum(input * weights1))
+    
+    #output = softmax(sum(self.hidden * weights2))
+    
     onehot = np.zeros((len(input), self.vocab_size))
     for i,v in enumerate(input.data.numpy()):
       onehot[i][v] = 1
