@@ -20,7 +20,22 @@ class RNNLM(nn.Module):
     self.i2h = Parameter(torch.randn(embedding_size + self.hidden_size, self.hidden_size))
     self.h2o = Parameter(torch.randn(self.hidden_size, vocab_size))
     self.bias = Variable(torch.zeros((48,self.vocab_size)))
+    self.softmax = torch.nn.LogSoftmax()
     self.reset_parameters()
+
+  def to_scalar(self,var):
+        # returns a python float
+        return var.view(-1).data.tolist()[0]
+
+  def argmax(self, vec):
+        # return the argmax as a python int
+        _, idx = torch.max(vec, 1)
+        return self.to_scalar(idx)
+
+  def log_sum_exp(self, vec):
+        max_score = vec[0, self.argmax(vec)]
+        max_score_broadcast = max_score.view(1, -1).expand(1, vec.size()[1])
+        return max_score + torch.log(torch.sum(torch.exp(vec - max_score_broadcast)))
 
   def forward(self, input):
     input_len, batch_size = input.size()
@@ -32,8 +47,13 @@ class RNNLM(nn.Module):
       hidden = torch.tanh(torch.mm(combined, self.i2h))
       #print hidden[1,3:6]
       #print self.h2o
-      output = torch.exp(torch.add(torch.mm(hidden, self.h2o), self.bias))
-      output = torch.log(torch.div(output,torch.sum(output)))
+      output = self.softmax(torch.add(torch.mm(hidden, self.h2o), self.bias))
+      
+      #output = torch.add(torch.mm(hidden, self.h2o), self.bias)
+      #result = output.sub(self.log_sum_exp(output))#torch.log(torch.sum(torch.exp(output)))
+      #print result
+      #print self.softmax(torch.add(torch.mm(hidden, self.h2o), self.bias))
+      print hidden
       o[i,:,:] = output
     return o
     
@@ -68,7 +88,7 @@ class BiRNNLM(nn.Module):
       #48x31 31x16
       hidden = torch.tanh(torch.mm(combined, self.i2h)) #48x16
       #48x31 31x7000
-      output = torch.exp(torch.mm(hidden, self.i2o))
-      output = torch.div(output,torch.sum(output))
+      output = torch.mm(hidden, self.i2o)
+      output -= torch.log(torch.sum(torch.exp(output)))
       o[i,:,:] = output
     return o
