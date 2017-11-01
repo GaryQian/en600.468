@@ -114,7 +114,7 @@ class BiRNNLM(nn.Module):
       
 
 class CustRNNLM(nn.Module):
-  def __init__(self, vocab_size):
+  def __init__(self, vocab_size, batch_size):
     super(CustRNNLM, self).__init__()
     #word embedding (vocab_size, embedding_dimension)
     embedding_size = 32
@@ -125,7 +125,7 @@ class CustRNNLM(nn.Module):
 
     self.i2h = Parameter(torch.randn(embedding_size + self.hidden_size, self.hidden_size))
     self.h2o = Parameter(torch.randn(self.hidden_size * 2, vocab_size))
-    self.bias = Variable(torch.zeros((48,self.vocab_size)))
+    self.bias = Variable(torch.zeros((batch_size,self.vocab_size)))
     self.softmax = torch.nn.LogSoftmax()
     self.reset_parameters()
 
