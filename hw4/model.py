@@ -3,6 +3,7 @@ import torch.nn as nn
 from torch.autograd import Variable
 from torch.nn import Parameter
 import numpy as np
+import math
 
 # TODO: Your implementation goes here
 class RNNLM(nn.Module):
@@ -16,21 +17,30 @@ class RNNLM(nn.Module):
     
     self.hidden_size = 16
 
-    self.i2h = Parameter(torch.randn(self.hidden_size + embedding_size, self.hidden_size))
-    self.i2o = Parameter(torch.randn(self.hidden_size, vocab_size))
+    self.i2h = Parameter(torch.randn(embedding_size + self.hidden_size, self.hidden_size))
+    self.h2o = Parameter(torch.randn(self.hidden_size, vocab_size))
+    self.reset_parameters()
 
   def forward(self, input):
     hidden = Variable(torch.randn(input.data.shape[1], self.hidden_size))
     o = Variable(torch.zeros((input.data.shape[0], input.data.shape[1], self.vocab_size)))
     for i in range(input.data.shape[0]):
       combined = torch.cat((self.we[input.data[i,:],:], hidden), 1)
-      #48x31 31x16
-      hidden = torch.tanh(torch.mm(combined, self.i2h)) #48x16
-      #48x31 31x7000
-      output = torch.exp(torch.mm(hidden, self.i2o))
+      
+      hidden = torch.tanh(torch.mm(combined, self.i2h)) 
+      
+      output = torch.exp(torch.mm(hidden, self.h2o))
       output = torch.log(torch.div(output,torch.sum(output)))
       o[i,:,:] = output
     return o
+    
+  def reset_parameters(self):
+    stdv = 1.0 / math.sqrt(self.hidden_size)
+    i = 0
+    for weight in self.parameters():
+      weight.data.uniform_(-stdv, stdv)
+      i += 1
+    print i
 
 
 # TODO: Your implementation goes here
