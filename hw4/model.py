@@ -19,17 +19,20 @@ class RNNLM(nn.Module):
 
     self.i2h = Parameter(torch.randn(embedding_size + self.hidden_size, self.hidden_size))
     self.h2o = Parameter(torch.randn(self.hidden_size, vocab_size))
+    self.bias = Variable(torch.zeros((48,self.vocab_size)))
     self.reset_parameters()
 
   def forward(self, input):
-    hidden = Variable(torch.randn(input.data.shape[1], self.hidden_size))
-    o = Variable(torch.zeros((input.data.shape[0], input.data.shape[1], self.vocab_size)))
-    for i in range(input.data.shape[0]):
+    input_len, batch_size = input.size()
+    hidden = Variable(torch.randn(batch_size, self.hidden_size))
+    o = Variable(torch.zeros((input_len, batch_size, self.vocab_size)))
+    for i in range(input_len):
+      
       combined = torch.cat((self.we[input.data[i,:],:], hidden), 1)
-      
-      hidden = torch.tanh(torch.mm(combined, self.i2h)) 
-      
-      output = torch.exp(torch.mm(hidden, self.h2o))
+      hidden = torch.tanh(torch.mm(combined, self.i2h))
+      #print hidden[1,3:6]
+      #print self.h2o
+      output = torch.exp(torch.add(torch.mm(hidden, self.h2o), self.bias))
       output = torch.log(torch.div(output,torch.sum(output)))
       o[i,:,:] = output
     return o
