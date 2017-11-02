@@ -77,7 +77,6 @@ class BiRNNLM(nn.Module):
     self.i2h1 = Parameter(torch.randn(embedding_size + self.hidden_size, self.hidden_size))
     self.i2h2 = Parameter(torch.randn(embedding_size + self.hidden_size, self.hidden_size))
     self.h2o = Parameter(torch.randn(self.hidden_size * 2, vocab_size))
-    self.bias = Variable(torch.ones((48,self.vocab_size)))
     self.softmax = torch.nn.LogSoftmax()
     self.reset_parameters()
 
@@ -104,7 +103,7 @@ class BiRNNLM(nn.Module):
     o = Variable(torch.zeros((input_len, batch_size, self.vocab_size)))
     for i in range(input_len):
       hidden = torch.cat((hiddenf[i,:,:], hiddenb[i+1,:,:]),1)
-      output = self.softmax(torch.add(torch.mm(hidden, self.h2o), self.bias))
+      output = self.softmax(torch.mm(hidden, self.h2o))
       o[i,:,:] = output
     return o
     
@@ -119,10 +118,10 @@ class CustRNNLM(nn.Module):
   def __init__(self, vocab_size):
     super(CustRNNLM, self).__init__()
     #word embedding (vocab_size, embedding_dimension)
-    embedding_size = 100
+    embedding_size = 128
     self.vocab_size = vocab_size
     self.we = Parameter(torch.randn(vocab_size, embedding_size))  # random word embedding
-    self.hidden_size = 50 / 2
+    self.hidden_size = 64 / 2
 
     self.i2h1 = Parameter(torch.randn(embedding_size + self.hidden_size, self.hidden_size))
     self.i2h2 = Parameter(torch.randn(embedding_size + self.hidden_size, self.hidden_size))
@@ -130,12 +129,12 @@ class CustRNNLM(nn.Module):
     self.softmax = torch.nn.LogSoftmax()
     self.hiddenInit = torch.randn(1, self.hidden_size)
     self.reset_parameters()
-    self.dropout_rate = 0.3
+    self.dropout_rate = 0.2
     self.we.data[1,:] = torch.zeros(embedding_size)
     self.bias = Parameter(torch.ones((1,self.hidden_size)))
 
   def getDropoutMask(self, dim):
-  	return torch.Tensor(np.random.binomial(np.ones(dim, dtype='int64'),1-dropout_percent)) 
+  	return torch.Tensor(np.random.binomial(np.ones(dim, dtype='int64'),1-self.dropout_rate)) 
 
 
   def forward(self, input, do_dropout=False):
@@ -150,7 +149,7 @@ class CustRNNLM(nn.Module):
       combined = torch.cat((self.we[input.data[i,:],:], hidden), 1)
       hidden = torch.tanh(torch.add(torch.mm(combined, self.i2h1), bias))
       if do_dropout:
-      	hidden =torch.mul(self.getDropoutMask(hidden.size()), hidden)
+      	hidden =torch.cmul(Variable(self.getDropoutMask(hidden.size()), requires_grad=False), hidden.data)
       hiddenf[i + 1,:,:] = hidden
       
     #backward
@@ -161,7 +160,7 @@ class CustRNNLM(nn.Module):
       combined = torch.cat((self.we[input.data[i,:],:], hidden), 1)
       hidden = torch.tanh(torch.add(torch.mm(combined, self.i2h2), bias))
       if do_dropout:
-      	hidden =torch.mul(self.getDropoutMask(hidden.size()), hidden)
+      	hidden =torch.cmul(Variable(self.getDropoutMask(hidden.size()), requires_grad=False), hidden.data)
       hiddenb[i,:,:] = hidden
       
     o = Variable(torch.zeros((input_len, batch_size, self.vocab_size)))

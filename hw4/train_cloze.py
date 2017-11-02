@@ -9,8 +9,6 @@ import torch
 from torch import cuda
 from torch.autograd import Variable
 from model import CustRNNLM
-from gmodel import GRNNLM
-
 # from model import BiRNNLM
 
 logging.basicConfig(
@@ -52,13 +50,10 @@ def main(options):
 
   vocab_size = len(vocab)
 
-  rnnlm = None
-
+  rnnlm = CustRNNLM(vocab_size)
   if use_cuda > 0:
-    rnnlm = GRNNLM(vocab_size)
     rnnlm.cuda()
   else:
-    rnnlm = CustRNNLM(vocab_size)
     rnnlm.cpu()
 
   criterion = torch.nn.NLLLoss()
@@ -76,7 +71,7 @@ def main(options):
         train_batch = train_batch.cuda()
         train_mask = train_mask.cuda()
 
-      sys_out_batch = rnnlm(train_batch)  # (seq_len, batch_size, vocab_size) # TODO: substitute this with your module
+      sys_out_batch = rnnlm(train_batch, do_dropout=True)  # (seq_len, batch_size, vocab_size) # TODO: substitute this with your module
       train_in_mask = train_mask.view(-1)
       train_in_mask = train_in_mask.unsqueeze(1).expand(len(train_in_mask), vocab_size)
       train_out_mask = train_mask.view(-1)
