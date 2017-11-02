@@ -13,8 +13,8 @@ from model import BiRNNLM
 
 import numpy as np
 
-epochId = 1
-prob = '3.93'
+epochId = 2
+prob = '3.94'
 
 rnn = torch.load(open('model.py.nll_' + prob + '.epoch_' + str(epochId), 'rb'), pickle_module=dill)
 
