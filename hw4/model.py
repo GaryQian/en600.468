@@ -74,7 +74,8 @@ class BiRNNLM(nn.Module):
     
     self.hidden_size = 16 / 2
 
-    self.i2h = Parameter(torch.randn(embedding_size + self.hidden_size, self.hidden_size))
+    self.i2h1 = Parameter(torch.randn(embedding_size + self.hidden_size, self.hidden_size))
+    self.i2h2 = Parameter(torch.randn(embedding_size + self.hidden_size, self.hidden_size))
     self.h2o = Parameter(torch.randn(self.hidden_size * 2, vocab_size))
     self.bias = Variable(torch.ones((48,self.vocab_size)))
     self.softmax = torch.nn.LogSoftmax()
@@ -88,7 +89,7 @@ class BiRNNLM(nn.Module):
     hiddenf[0,:,:] = hidden
     for i in range(input_len):
       combined = torch.cat((self.we[input.data[i,:],:], hidden), 1)
-      hidden = torch.tanh(torch.mm(combined, self.i2h))
+      hidden = torch.tanh(torch.mm(combined, self.i2h1))
       hiddenf[i + 1,:,:] = hidden
       
     #backward
@@ -97,7 +98,7 @@ class BiRNNLM(nn.Module):
     hiddenb[input_len:,:] = hidden
     for i in range(input_len)[::-1]:
       combined = torch.cat((self.we[input.data[i,:],:], hidden), 1)
-      hidden = torch.tanh(torch.mm(combined, self.i2h))
+      hidden = torch.tanh(torch.mm(combined, self.i2h2))
       hiddenb[i,:,:] = hidden
       
     o = Variable(torch.zeros((input_len, batch_size, self.vocab_size)))
