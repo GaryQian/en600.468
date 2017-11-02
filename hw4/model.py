@@ -129,12 +129,11 @@ class CustRNNLM(nn.Module):
     self.hiddenInit = torch.randn(1, self.hidden_size)
     self.reset_parameters()
     self.dropout_rate = 0.2
-
+    self.we.data[1,:] = torch.zeros(embedding_size)
     self.bias = Parameter(torch.ones((1,self.hidden_size)))
 
   def getDropoutMask(self, dim):
-  	mask = np.random.binomial(np.ones(dim, dtype='int64'),1-dropout_percent) 
-  	return torch.Tensor(mask)
+  	return torch.Tensor(np.random.binomial(np.ones(dim, dtype='int64'),1-dropout_percent)) 
 
 
   def forward(self, input, do_dropout=False):
