@@ -36,15 +36,15 @@ for line in lines:
     if w == "<blank>":
       blanks.append(i)
   #print vec
-  result = rnn(Variable(torch.Tensor(vec).long())).data
+  result = rnn(Variable(torch.t(torch.Tensor(vec).long()))).data
   output = []
-  print result
+  #print result
   for i in blanks:
     output.append(result[i,0])
   #print blanks
   s = ""
   for dist in output:
     s += vocab.itos[np.argmax(dist.numpy())] + " "
-  #print s.encode('utf-8')
+  print s.encode('utf-8')
   
   
