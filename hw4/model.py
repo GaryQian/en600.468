@@ -126,6 +126,7 @@ class CustRNNLM(nn.Module):
     self.i2h = Parameter(torch.randn(embedding_size + self.hidden_size, self.hidden_size))
     self.h2o = Parameter(torch.randn(self.hidden_size * 2, vocab_size))
     self.softmax = torch.nn.LogSoftmax()
+    self.hiddenInit = torch.randn(1, self.hidden_size)
     self.reset_parameters()
     #self.bias = Variable(torch.ones((1,1)))
     self.dropout_rate = 0.2
@@ -141,7 +142,7 @@ class CustRNNLM(nn.Module):
     #bias = self.bias.repeat(batch_size, 1)
     #print self.bias
     #Forward
-    hidden = Variable(torch.randn(batch_size, self.hidden_size))
+    hidden = Variable(self.hiddenInit.repeat(batch_size, 1))
     hiddenf = Variable(torch.randn(input_len + 1, batch_size, self.hidden_size))
     hiddenf[0,:,:] = hidden
     for i in range(input_len):
@@ -152,7 +153,7 @@ class CustRNNLM(nn.Module):
       hiddenf[i + 1,:,:] = hidden
       
     #backward
-    hidden = Variable(torch.randn(batch_size, self.hidden_size))
+    hidden = Variable(self.hiddenInit.repeat(batch_size, 1))
     hiddenb = Variable(torch.randn(input_len + 1, batch_size, self.hidden_size))
     hiddenb[input_len:,:] = hidden
     for i in range(input_len)[::-1]:
