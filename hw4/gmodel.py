@@ -7,25 +7,25 @@ import math
 
 class GRNNLM(nn.Module):
   def __init__(self, vocab_size):
-    super(CustRNNLM, self).__init__()
+    super(GRNNLM, self).__init__()
     #word embedding (vocab_size, embedding_dimension)
-    embedding_size = 32
+    embedding_size = 128
     self.vocab_size = vocab_size
     self.we = Parameter(torch.randn(vocab_size, embedding_size).cuda())  # random word embedding
-    self.hidden_size = 16 / 2
+    self.hidden_size = 64 / 2
 
-    self.i2h = Parameter(torch.randn(embedding_size + self.hidden_size, self.hidden_size).cuda())
+    self.i2h1 = Parameter(torch.randn(embedding_size + self.hidden_size, self.hidden_size).cuda())
+    self.i2h2 = Parameter(torch.randn(embedding_size + self.hidden_size, self.hidden_size).cuda())
     self.h2o = Parameter(torch.randn(self.hidden_size * 2, vocab_size).cuda())
     self.softmax = torch.nn.LogSoftmax().cuda()
     self.hiddenInit = torch.randn(1, self.hidden_size).cuda()
     self.reset_parameters()
     self.dropout_rate = 0.2
-
+    self.we.data[1,:] = torch.zeros(embedding_size).cuda()
     self.bias = Parameter(torch.ones((1,self.hidden_size)).cuda())
 
   def getDropoutMask(self, dim):
-  	mask = np.random.binomial(np.ones(dim, dtype='int64'),1-dropout_percent) 
-  	return torch.Tensor(mask).cuda()
+    return torch.Tensor(np.random.binomial(np.ones(dim, dtype='int64'),1-self.dropout_rate).cuda()) 
 
 
   def forward(self, input, do_dropout=False):
@@ -38,9 +38,9 @@ class GRNNLM(nn.Module):
     hiddenf[0,:,:] = hidden
     for i in range(input_len):
       combined = torch.cat((self.we[input.data[i,:],:], hidden), 1)
-      hidden = torch.tanh(torch.add(torch.mm(combined, self.i2h), bias))
+      hidden = torch.tanh(torch.add(torch.mm(combined, self.i2h1), bias))
       if do_dropout:
-      	hidden =torch.mul(self.getDropoutMask(hidden.size()), hidden)
+        hidden =torch.mul(Variable(self.getDropoutMask(hidden.size()).cuda()), hidden)
       hiddenf[i + 1,:,:] = hidden
       
     #backward
@@ -49,9 +49,9 @@ class GRNNLM(nn.Module):
     hiddenb[input_len:,:] = hidden
     for i in range(input_len)[::-1]:
       combined = torch.cat((self.we[input.data[i,:],:], hidden), 1)
-      hidden = torch.tanh(torch.add(torch.mm(combined, self.i2h), bias))
+      hidden = torch.tanh(torch.add(torch.mm(combined, self.i2h2), bias))
       if do_dropout:
-      	hidden =torch.mul(self.getDropoutMask(hidden.size()), hidden)
+        hidden =torch.mul(Variable(self.getDropoutMask(hidden.size()).cuda()), hidden)
       hiddenb[i,:,:] = hidden
       
     o = Variable(torch.zeros((input_len, batch_size, self.vocab_size)).cuda())
