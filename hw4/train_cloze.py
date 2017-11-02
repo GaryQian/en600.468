@@ -50,10 +50,12 @@ def main(options):
 
   vocab_size = len(vocab)
 
-  rnnlm = CustRNNLM(vocab_size)
+  rnnlm = None
   if use_cuda > 0:
+    rnnlm = GRNNLM(vocab_size)
     rnnlm.cuda()
   else:
+    rnnlm = CustRNNLM(vocab_size)
     rnnlm.cpu()
 
   criterion = torch.nn.NLLLoss()
