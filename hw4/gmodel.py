@@ -1,3 +1,10 @@
+import torch
+import torch.nn as nn
+from torch.autograd import Variable
+from torch.nn import Parameter
+import numpy as np
+import math
+
 class GRNNLM(nn.Module):
   def __init__(self, vocab_size):
     super(CustRNNLM, self).__init__()

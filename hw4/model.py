@@ -118,10 +118,10 @@ class CustRNNLM(nn.Module):
   def __init__(self, vocab_size):
     super(CustRNNLM, self).__init__()
     #word embedding (vocab_size, embedding_dimension)
-    embedding_size = 32
+    embedding_size = 80
     self.vocab_size = vocab_size
     self.we = Parameter(torch.randn(vocab_size, embedding_size))  # random word embedding
-    self.hidden_size = 16 / 2
+    self.hidden_size = 40 / 2
 
     self.i2h = Parameter(torch.randn(embedding_size + self.hidden_size, self.hidden_size))
     self.h2o = Parameter(torch.randn(self.hidden_size * 2, vocab_size))
