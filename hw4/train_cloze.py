@@ -9,6 +9,8 @@ import torch
 from torch import cuda
 from torch.autograd import Variable
 from model import CustRNNLM
+from gmodel import GRNNLM
+
 # from model import BiRNNLM
 
 logging.basicConfig(
@@ -50,10 +52,13 @@ def main(options):
 
   vocab_size = len(vocab)
 
-  rnnlm = CustRNNLM(vocab_size)
+  rnnlm = None
+
   if use_cuda > 0:
+    rnnlm = GRNNLM(vocab_size)
     rnnlm.cuda()
   else:
+    rnnlm = CustRNNLM(vocab_size)
     rnnlm.cpu()
 
   criterion = torch.nn.NLLLoss()
