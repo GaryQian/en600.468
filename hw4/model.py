@@ -149,7 +149,7 @@ class CustRNNLM(nn.Module):
       combined = torch.cat((self.we[input.data[i,:],:], hidden), 1)
       hidden = torch.tanh(torch.add(torch.mm(combined, self.i2h1), bias))
       if do_dropout:
-      	hidden =torch.cmul(Variable(self.getDropoutMask(hidden.size()), requires_grad=False), hidden.data)
+      	hidden =torch.mul(Variable(self.getDropoutMask(hidden.size())), hidden)
       hiddenf[i + 1,:,:] = hidden
       
     #backward
@@ -160,7 +160,7 @@ class CustRNNLM(nn.Module):
       combined = torch.cat((self.we[input.data[i,:],:], hidden), 1)
       hidden = torch.tanh(torch.add(torch.mm(combined, self.i2h2), bias))
       if do_dropout:
-      	hidden =torch.cmul(Variable(self.getDropoutMask(hidden.size()), requires_grad=False), hidden.data)
+      	hidden =torch.mul(Variable(self.getDropoutMask(hidden.size())), hidden)
       hiddenb[i,:,:] = hidden
       
     o = Variable(torch.zeros((input_len, batch_size, self.vocab_size)))
