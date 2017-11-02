@@ -19,7 +19,7 @@ class RNNLM(nn.Module):
 
     self.i2h = Parameter(torch.randn(embedding_size + self.hidden_size, self.hidden_size))
     self.h2o = Parameter(torch.randn(self.hidden_size, vocab_size))
-    self.bias = Variable(torch.zeros((48,self.vocab_size)))
+    self.bias = Variable(torch.ones((48,self.vocab_size)))
     self.softmax = torch.nn.LogSoftmax()
     self.reset_parameters()
 
@@ -75,7 +75,7 @@ class BiRNNLM(nn.Module):
 
     self.i2h = Parameter(torch.randn(embedding_size + self.hidden_size, self.hidden_size))
     self.h2o = Parameter(torch.randn(self.hidden_size * 2, vocab_size))
-    self.bias = Variable(torch.zeros((48,self.vocab_size)))
+    self.bias = Variable(torch.ones((48,self.vocab_size)))
     self.softmax = torch.nn.LogSoftmax()
     self.reset_parameters()
 
@@ -114,7 +114,7 @@ class BiRNNLM(nn.Module):
       
 
 class CustRNNLM(nn.Module):
-  def __init__(self, vocab_size, batch_size):
+  def __init__(self, vocab_size):
     super(CustRNNLM, self).__init__()
     #word embedding (vocab_size, embedding_dimension)
     embedding_size = 32
@@ -125,12 +125,14 @@ class CustRNNLM(nn.Module):
 
     self.i2h = Parameter(torch.randn(embedding_size + self.hidden_size, self.hidden_size))
     self.h2o = Parameter(torch.randn(self.hidden_size * 2, vocab_size))
-    self.bias = Variable(torch.zeros((batch_size,self.vocab_size)))
     self.softmax = torch.nn.LogSoftmax()
     self.reset_parameters()
+    #self.bias = Variable(torch.ones((1,1)))
 
   def forward(self, input):
     input_len, batch_size = input.size()
+    #bias = self.bias.repeat(batch_size, 1)
+    #print self.bias
     #Forward
     hidden = Variable(torch.randn(batch_size, self.hidden_size))
     hiddenf = Variable(torch.randn(input_len + 1, batch_size, self.hidden_size))
@@ -152,7 +154,7 @@ class CustRNNLM(nn.Module):
     o = Variable(torch.zeros((input_len, batch_size, self.vocab_size)))
     for i in range(input_len):
       hidden = torch.cat((hiddenf[i,:,:], hiddenb[i+1,:,:]),1)
-      output = self.softmax(torch.add(torch.mm(hidden, self.h2o), self.bias))
+      output = self.softmax(torch.mm(hidden, self.h2o))
       o[i,:,:] = output
     return o
     
