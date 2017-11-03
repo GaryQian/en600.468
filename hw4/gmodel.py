@@ -20,12 +20,12 @@ class GRNNLM(nn.Module):
     self.softmax = torch.nn.LogSoftmax().cuda()
     self.hiddenInit = torch.randn(1, self.hidden_size).cuda()
     self.reset_parameters()
-    self.dropout_rate = 0.2
+    self.dropout_rate = 0.1
     self.we.data[1,:] = torch.zeros(embedding_size).cuda()
     self.bias = Parameter(torch.ones((1,self.hidden_size)).cuda())
 
   def getDropoutMask(self, dim):
-    return torch.Tensor(np.random.binomial(np.ones(dim, dtype='int64'),1-self.dropout_rate).cuda()) 
+    return torch.Tensor(np.random.binomial(np.ones(dim, dtype='int64'),1-self.dropout_rate)).cuda() 
 
 
   def forward(self, input, do_dropout=False):

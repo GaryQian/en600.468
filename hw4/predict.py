@@ -13,10 +13,10 @@ from model import BiRNNLM
 
 import numpy as np
 
-epochId = 2
-prob = '3.94'
+epochId = 1
+prob = '4.09'
 
-rnn = torch.load(open('model.py.nll_' + prob + '.epoch_' + str(epochId), 'rb'), pickle_module=dill)
+rnn = torch.load(open('gmodel.py.nll_' + prob + '.epoch_' + str(epochId), 'rb'), pickle_module=dill)
 
 lines = []
 with open('data/test.en.txt.cloze') as f:

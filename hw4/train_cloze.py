@@ -9,6 +9,7 @@ import torch
 from torch import cuda
 from torch.autograd import Variable
 from model import CustRNNLM
+from gmodel import GRNNLM
 # from model import BiRNNLM
 
 logging.basicConfig(
