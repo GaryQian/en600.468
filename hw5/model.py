@@ -6,171 +6,33 @@ import numpy as np
 import math
 
 # TODO: Your implementation goes here
-class RNNLM(nn.Module):
-  def __init__(self, vocab_size):
-    super(RNNLM, self).__init__()
+class Encoder(nn.Module):
+  def __init__(self):
+    super(Encoder, self).__init__()
     
-    #word embedding (vocab_size, embedding_dimension)
-    embedding_size = 32
-    self.vocab_size = vocab_size
-    self.we = Parameter(torch.randn(vocab_size, embedding_size))  # random word embedding
+    self.initParams = torch.load(open("model.param", "rb"))
     
-    self.hidden_size = 16
-
-    self.i2h = Parameter(torch.randn(embedding_size + self.hidden_size, self.hidden_size))
-    self.h2o = Parameter(torch.randn(self.hidden_size, vocab_size))
-    self.bias = Variable(torch.ones((1,self.vocab_size)))
-    self.softmax = torch.nn.LogSoftmax()
-    self.reset_parameters()
-
-  def to_scalar(self,var):
-        # returns a python float
-        return var.view(-1).data.tolist()[0]
-
-  def argmax(self, vec):
-        # return the argmax as a python int
-        _, idx = torch.max(vec, 1)
-        return self.to_scalar(idx)
-
-  def log_sum_exp(self, vec):
-        max_score = vec[0, self.argmax(vec)]
-        max_score_broadcast = max_score.view(1, -1).expand(1, vec.size()[1])
-        return max_score + torch.log(torch.sum(torch.exp(vec - max_score_broadcast)))
-
-  def forward(self, input):
-    input_len, batch_size = input.size()
-    hidden = Variable(torch.randn(batch_size, self.hidden_size))
-    bias = self.bias.repeat(batch_size,1)
-    o = Variable(torch.zeros((input_len, batch_size, self.vocab_size)))
-    for i in range(input_len):
-      
-      combined = torch.cat((self.we[input.data[i,:],:], hidden), 1)
-      hidden = torch.tanh(torch.mm(combined, self.i2h))
-      #print hidden[1,3:6]
-      #print self.h2o
-      output = self.softmax(torch.add(torch.mm(hidden, self.h2o), self.bias))
-      
-      #output = torch.add(torch.mm(hidden, self.h2o), self.bias)
-      #result = output.sub(self.log_sum_exp(output))#torch.log(torch.sum(torch.exp(output)))
-      #print result
-      #print self.softmax(torch.add(torch.mm(hidden, self.h2o), self.bias))
-      o[i,:,:] = output
-    return o
     
-  def reset_parameters(self):
-    stdv = 1.0 / math.sqrt(self.hidden_size)
-    for weight in self.parameters():
-      weight.data.uniform_(-stdv, stdv)
-
-
-# TODO: Your implementation goes here
-class BiRNNLM(nn.Module):
-  def __init__(self, vocab_size):
-    super(BiRNNLM, self).__init__()
-    #word embedding (vocab_size, embedding_dimension)
-    embedding_size = 32
-    self.vocab_size = vocab_size
-    self.we = Parameter(torch.randn(vocab_size, embedding_size))  # random word embedding
+    self.embedding = torch.nn.Embedding(36616, 300)
+    self.embedding.weight.data = self.initParams["encoder.embeddings.emb_luts.0.weight"]
     
-    self.hidden_size = 16 / 2
-
-    self.i2h1 = Parameter(torch.randn(embedding_size + self.hidden_size, self.hidden_size))
-    self.i2h2 = Parameter(torch.randn(embedding_size + self.hidden_size, self.hidden_size))
-    self.h2o = Parameter(torch.randn(self.hidden_size * 2, vocab_size))
-    self.softmax = torch.nn.LogSoftmax()
-    self.reset_parameters()
-
-  def forward(self, input):
-    input_len, batch_size = input.size()
-    #Forward
-    hidden = Variable(torch.randn(batch_size, self.hidden_size))
-    hiddenf = Variable(torch.randn(input_len + 1, batch_size, self.hidden_size))
-    hiddenf[0,:,:] = hidden
-    for i in range(input_len):
-      combined = torch.cat((self.we[input.data[i,:],:], hidden), 1)
-      hidden = torch.tanh(torch.mm(combined, self.i2h1))
-      hiddenf[i + 1,:,:] = hidden
-      
-    #backward
-    hidden = Variable(torch.randn(batch_size, self.hidden_size))
-    hiddenb = Variable(torch.randn(input_len + 1, batch_size, self.hidden_size))
-    hiddenb[input_len:,:] = hidden
-    for i in range(input_len)[::-1]:
-      combined = torch.cat((self.we[input.data[i,:],:], hidden), 1)
-      hidden = torch.tanh(torch.mm(combined, self.i2h2))
-      hiddenb[i,:,:] = hidden
-      
-    o = Variable(torch.zeros((input_len, batch_size, self.vocab_size)))
-    for i in range(input_len):
-      hidden = torch.cat((hiddenf[i,:,:], hiddenb[i+1,:,:]),1)
-      output = self.softmax(torch.mm(hidden, self.h2o))
-      o[i,:,:] = output
-    return o
+    self.lstm = torch.nn.LSTM(input_size=2048, hidden_size=300, num_layers=1, bidirectional=True)
     
-  def reset_parameters(self):
-    stdv = 1.0 / math.sqrt(self.hidden_size)
-    for weight in self.parameters():
-      weight.data.uniform_(-stdv, stdv)
-      
-      
-
-class CustRNNLM(nn.Module):
-  def __init__(self, vocab_size):
-    super(CustRNNLM, self).__init__()
-    #word embedding (vocab_size, embedding_dimension)
-    embedding_size = 128
-    self.vocab_size = vocab_size
-    self.we = Parameter(torch.randn(vocab_size, embedding_size))  # random word embedding
-    self.hidden_size = 64 / 2
-
-    self.i2h1 = Parameter(torch.randn(embedding_size + self.hidden_size, self.hidden_size))
-    self.i2h2 = Parameter(torch.randn(embedding_size + self.hidden_size, self.hidden_size))
-    self.h2o = Parameter(torch.randn(self.hidden_size * 2, vocab_size))
-    self.softmax = torch.nn.LogSoftmax()
-    self.hiddenInit = torch.randn(1, self.hidden_size)
-    self.reset_parameters()
-    self.dropout_rate = 0.2
-    self.we.data[1,:] = torch.zeros(embedding_size)
-    self.bias = Parameter(torch.ones((1,self.hidden_size)))
-
-  def getDropoutMask(self, dim):
-  	return torch.Tensor(np.random.binomial(np.ones(dim, dtype='int64'),1-self.dropout_rate)) 
-
+    self.lstm.weight_ih_l0.data = self.initParams["encoder.rnn.weight_ih_l0"]
+    self.lstm.weight_hh_l0.data = self.initParams["encoder.rnn.weight_hh_l0"]
+    self.lstm.bias_ih_l0.data = self.initParams["encoder.rnn.bias_ih_l0"]
+    self.lstm.bias_hh_l0.data = self.initParams["encoder.rnn.bias_hh_l0"]
+    
+    self.lstm.weight_ih_l0_reverse.data = self.initParams["encoder.rnn.weight_ih_l0_reverse"]
+    self.lstm.weight_hh_l0_reverse.data = self.initParams["encoder.rnn.weight_hh_l0_reverse"]
+    self.lstm.bias_ih_l0_reverse.data = self.initParams["encoder.rnn.bias_ih_l0_reverse"]
+    self.lstm.bias_hh_l0_reverse.data = self.initParams["encoder.rnn.bias_hh_l0_reverse"]
+    
 
   def forward(self, input, do_dropout=False):
-    input_len, batch_size = input.size()
-    bias = self.bias.repeat(batch_size,1)
-
-    #Forward
-    hidden = Variable(self.hiddenInit.repeat(batch_size, 1))
-    hiddenf = Variable(torch.randn(input_len + 1, batch_size, self.hidden_size))
-    hiddenf[0,:,:] = hidden
-    for i in range(input_len):
-      combined = torch.cat((self.we[input.data[i,:],:], hidden), 1)
-      hidden = torch.tanh(torch.add(torch.mm(combined, self.i2h1), bias))
-      if do_dropout:
-      	hidden =torch.mul(Variable(self.getDropoutMask(hidden.size())), hidden)
-      hiddenf[i + 1,:,:] = hidden
-      
-    #backward
-    hidden = Variable(self.hiddenInit.repeat(batch_size, 1))
-    hiddenb = Variable(torch.randn(input_len + 1, batch_size, self.hidden_size))
-    hiddenb[input_len:,:] = hidden
-    for i in range(input_len)[::-1]:
-      combined = torch.cat((self.we[input.data[i,:],:], hidden), 1)
-      hidden = torch.tanh(torch.add(torch.mm(combined, self.i2h2), bias))
-      if do_dropout:
-      	hidden =torch.mul(Variable(self.getDropoutMask(hidden.size())), hidden)
-      hiddenb[i,:,:] = hidden
-      
-    o = Variable(torch.zeros((input_len, batch_size, self.vocab_size)))
-    for i in range(input_len):
-      hidden = torch.cat((hiddenf[i,:,:], hiddenb[i+1,:,:]),1)
-      output = self.softmax(torch.mm(hidden, self.h2o))
-      o[i,:,:] = output
-    return o
+    embedded = self.embedding(input).view(1, 1, -1)
+    output = embedded
+    output, hidden = self.lstm(output, None)
+    return output
     
-  def reset_parameters(self):
-    stdv = 1.0 / math.sqrt(self.hidden_size)
-    for weight in self.parameters():
-      weight.data.uniform_(-stdv, stdv)
+m = NMT()
