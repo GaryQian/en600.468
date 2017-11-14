@@ -10,6 +10,8 @@ from torch import cuda
 from torch.autograd import Variable
 from model import NMT
 
+#python train.py --data_file hw5 --model_file modeldump.model --optimizer Adam -lr 1e-2 --batch_size 48
+
 logging.basicConfig(
     format='%(asctime)s %(levelname)s: %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S', level=logging.DEBUG)
