@@ -42,11 +42,10 @@ class Decoder(nn.Module):
     
     #23262
     self.gen = torch.nn.Linear(1024,trg_vocab_size)
-    self.hidden = Parameter(torch.randn((48, 1, 1024)))
+    self.hidden = Parameter(torch.randn((48, 1024)))
     
 
   def forward(self, targ, encoder_out):
-    self.hidden = Parameter(torch.randn((48, 1024)))
     embedded = self.embedding(targ)
     output = embedded
     
@@ -85,6 +84,6 @@ class NMT(nn.Module):
 
   def forward(self, input, targ):
     
-    encout, self.enchidden = self.Encoder(input)
+    encout, _ = self.Encoder(input)
     
-    return self.Decoder.forward(targ, encout)
+    return self.Decoder(targ, encout)
