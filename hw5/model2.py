@@ -41,8 +41,8 @@ class Decoder(nn.Module):
     
     self.lstm = torch.nn.LSTM(input_size=1324, hidden_size=1024, num_layers=1)
     
-    
-    self.gen = torch.nn.Linear(1024,23262)
+    #23262
+    self.gen = torch.nn.Linear(1024,79)
 
     self.hidden = Parameter(torch.randn((48, 1, 1024)))
     
@@ -75,7 +75,8 @@ class Decoder(nn.Module):
     output = torch.cat((context.repeat(len(embedded), 1,1), embedded), 2)
     output, hiddenN = self.lstm(output, Variable(torch.zeros((2, 48, 1024,))))
     generated = self.gen(output)
-    print generated
+    _,id = torch.max(generated,2)
+    print id
     return generated
   
   def score(self, h_s, h_t):
