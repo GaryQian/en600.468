@@ -20,6 +20,7 @@ class Encoder(nn.Module):
   def forward(self, input):
     embedded = self.embedding(input)
     output = embedded
+    print output
     output, self.hidden = self.lstm(output, self.hidden)
     return output, self.hidden
 
@@ -41,46 +42,51 @@ class Decoder(nn.Module):
     self.lstm = torch.nn.LSTM(input_size=1324, hidden_size=1024, num_layers=1)
     
     
-    self.gen = torch.nn.Linear(23262, 1024)
+    self.gen = torch.nn.Linear(1024,23262)
 
     self.hidden = Parameter(torch.randn((48, 1, 1024)))
     
 
   def forward(self, targ, encoder_out):
-    self.hidden = Parameter(torch.randn((48, len(encoder_out), 1024)))
+    self.hidden = Parameter(torch.randn((48, 1024)))
     embedded = self.embedding(targ)
     output = embedded
     #print hidden
     #hidden = torch.cat((hidden[0], hidden[1]), 2)[0]
     
-    #sc = Variable(torch.zeros((len(encoder_out),)))
-    #for i in range(len(encoder_out)):
-    #  sc[i] = self.score(encoder_out[i], self.hidden)
-    sc = self.score(encoder_out, self.hidden)
+    sc = Variable(torch.zeros((len(encoder_out),48,)))
+    for i in range(len(encoder_out)):
+      sc[i] = self.score(encoder_out[i], self.hidden)
+    #sc = self.score(encoder_out, self.hidden)
     a = self.softmax(sc)#.unsqueeze(2)
-    mult = torch.mul(a.unsqueeze(2), encoder_out)
-    print mult
+    a = a.repeat(1024,1,1).transpose(0,1).transpose(1,2)
+
+    mult = torch.mul(a, encoder_out)
+
     s = torch.sum(mult, 0)
     #print s
-    #print s
-    context = torch.tanh(self.attout(torch.cat((s, hidden), 2)))
-#1 seq 48
-#1 48 1024
+    #print self.hidden
+    context = torch.tanh(self.attout(torch.cat((s, self.hidden), 1)))
+    #1 seq 48
+    #1 48 1024
 
-#48 1024
-    output = torch.cat((context, embedded), 2)
-    
-    output, hiddenN = self.lstm(score, hidden)
-    
+    #48 1024
+
+    output = torch.cat((context.repeat(len(embedded), 1,1), embedded), 2)
+    output, hiddenN = self.lstm(output, Variable(torch.zeros((2, 48, 1024,))))
     generated = self.gen(output)
-    return generated, hiddenN
+    print generated
+    return generated
   
   def score(self, h_s, h_t):
     #seqlen = len(h_s)
     h_t = self.attin(h_t)
     #h_t = h_t_.view(48, seqlen, 1024)
-    print h_t
-    return torch.bmm(h_t, h_s.transpose(0,1))
+    a = Variable(torch.zeros((48,1)))
+    for i in range(len(h_t)):
+        a[i] = torch.dot(h_s[i], h_t[i])
+    #a = torch.bmm(h_s, h_t)
+    return a.transpose(0,1)
     #= self.attin(encoder_out)
     #sc = Variable(torch.zeros(48))
     #for i in range(48):
