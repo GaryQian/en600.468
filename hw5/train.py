@@ -56,8 +56,9 @@ def main(options):
   batched_dev_trg, batched_dev_trg_mask = utils.tensor.advanced_batchize_no_sort(trg_dev, options.batch_size, trg_vocab.stoi["<blank>"], sort_index)
 
   trg_vocab_size = len(trg_vocab)
+  src_vocab_size = len(src_vocab)
 
-  nmt = NMT(trg_vocab_size) # TODO: add more arguments as necessary 
+  nmt = NMT(src_vocab_size, trg_vocab_size) # TODO: add more arguments as necessary 
   if use_cuda > 0:
     nmt.cuda()
   else:
@@ -92,7 +93,7 @@ def main(options):
       loss = criterion(sys_out_batch, train_trg_batch)
       logging.debug("loss at batch {0}: {1}".format(i, loss.data[0]))
       optimizer.zero_grad()
-      loss.backward()
+      loss.backward(retain_graph=True)
       optimizer.step()
 
     # validation -- this is a crude esitmation because there might be some paddings at the end
