@@ -60,6 +60,8 @@ class Decoder(nn.Module):
   def __init__(self, src_vocab_size, trg_vocab_size):
     super(Decoder, self).__init__()
     
+    hidden_size = 1024
+    
     self.initParams = torch.load(open("model.param", "rb"))
     
     self.embedding = torch.nn.Embedding(trg_vocab_size, 300)
@@ -79,6 +81,8 @@ class Decoder(nn.Module):
     self.gen = torch.nn.Linear(1024,trg_vocab_size)
     self.hidden = None#Parameter(torch.randn((48, 1024)))
     self.prev = Variable(torch.randn((48, 1024)))
+    
+    self.concat = nn.Linear(hidden_size * 2, hidden_size)
     
 
   def forward(self, targ, encoder_out):
@@ -101,13 +105,22 @@ class Decoder(nn.Module):
     for i in range(len(encoder_out)):
       sc[i] = self.score(encoder_out[i], self.prev)
     a = self.softmax(sc)
+    context = a.bmm(encoder_out.transpose(0, 1))
+    
+    prev = self.prev.squeeze(0) # S=1 x B x N -> B x N
+    context = context.squeeze(1)       # B x S=1 x N -> B x N
+    concat_input = torch.cat((prev, context), 1)
+    concat_output = torch.tanh(self.concat(concat_input))
+    
     #a = a.repeat(1024,1,1).transpose(0,1).transpose(1,2)
     #broadcasting
-    mult = torch.mul(encoder_out, a)
-    s = torch.sum(mult, 0)
+    #mult = torch.mul(encoder_out, a.unsqueeze(2).repeat(1, 1, 1024))
+    #s = torch.sum(mult, 0)
+    #
+    #context = torch.tanh(self.attout(torch.cat((s, self.prev), 1)))
+    #output = torch.cat((context.repeat(len(embedded), 1,1), embedded), 2)
     
-    context = torch.tanh(self.attout(torch.cat((s, self.hidden), 1)))
-    output = torch.cat((context.repeat(len(embedded), 1,1), embedded), 2)
+    #--------------------------------
     
     #output, hiddenN = self.lstm(embedded, self.hidden)
     
@@ -124,12 +137,13 @@ class Decoder(nn.Module):
     #concat_output = F.tanh(self.concat(concat_input))
     
     
-    self.prev, self.hidden = self.lstm(output, self.hidden)#Variable(torch.zeros((2, 48, 1024,))))
+    self.prev, self.hidden = self.lstm(concat_out, self.hidden)#Variable(torch.zeros((2, 48, 1024,))))
     generated = self.gen(self.prev)
     return generated
   
   def score(self, h_s, h_t):
     h_t = self.attin(h_t)
+    print h_s
     return h_t.unsqueeze(1).bmm(h_s.unsqueeze(1).transpose(1,2))
     #a = Variable(torch.zeros((48,1)))
     #for i in range(len(h_t)):
