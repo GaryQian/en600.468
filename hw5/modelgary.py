@@ -51,10 +51,9 @@ class Attn(nn.Module):
     # Normalize energies to weights in range 0 to 1, resize to 1 x B x S
     return self.softmax(attn_energies).unsqueeze(1)
   
-  def score(self, hidden, encoder_output):
-    energy = self.attn(encoder_output)
-    energy = hidden.dot(energy)
-    return energy
+    def score(self, h_s, h_t):
+        h_t = self.attin(h_t)
+        return h_t.unsqueeze(1).bmm(h_s.unsqueeze(1).transpose(1,2))
 
 class Decoder(nn.Module):
   def __init__(self, src_vocab_size, trg_vocab_size):
@@ -114,13 +113,12 @@ class Decoder(nn.Module):
     
     #a = a.repeat(1024,1,1).transpose(0,1).transpose(1,2)
     #broadcasting
-    #mult = torch.mul(encoder_out, a.unsqueeze(2).repeat(1, 1, 1024))
-    #s = torch.sum(mult, 0)
-    #
-    #context = torch.tanh(self.attout(torch.cat((s, self.prev), 1)))
-    #output = torch.cat((context.repeat(len(embedded), 1,1), embedded), 2)
+
+    mult = torch.mul(encoder_out, a.unsqueeze(2))
+    s = torch.sum(mult, 0)
     
-    #--------------------------------
+    context = torch.tanh(self.attout(torch.cat((s, self.prev), 1)))
+    output = torch.cat((context.repeat(len(embedded), 1,1), embedded), 2)
     
     #output, hiddenN = self.lstm(embedded, self.hidden)
     
@@ -137,20 +135,16 @@ class Decoder(nn.Module):
     #concat_output = F.tanh(self.concat(concat_input))
     
     
-    self.prev, self.hidden = self.lstm(concat_out, self.hidden)#Variable(torch.zeros((2, 48, 1024,))))
+
+    self.prev, _= self.lstm(output, None)#Variable(torch.zeros((2, 48, 1024,))))
     generated = self.gen(self.prev)
+    self.prev = self.prev[-1]
     return generated
   
   def score(self, h_s, h_t):
     h_t = self.attin(h_t)
-    print h_s
-    return h_t.unsqueeze(1).bmm(h_s.unsqueeze(1).transpose(1,2))
-    #a = Variable(torch.zeros((48,1)))
-    #for i in range(len(h_t)):
-    #    a[i] = torch.dot(h_s[i], h_t[i])
-    #return a.transpose(0,1)
-
-    
+    res= h_t.unsqueeze(1).bmm(h_s.unsqueeze(1).transpose(1,2))
+    return res
     
 class NMT(nn.Module):
   def __init__(self, src_vocab_size, trg_vocab_size):
