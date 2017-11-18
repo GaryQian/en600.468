@@ -21,27 +21,29 @@ _, _,_, trg_vocab = torch.load(open('hw5.phoneme', 'rb'))
 #src_train, src_dev, src_test = src_train[:-1], src_dev[:-1], src_test[:-1]
 #trg_train, trg_dev, trg_test = trg_train[1:], trg_dev[1:], trg_test[1:]
 
-trg_vocab_size = len(trg_vocab)
-src_vocab_size = len(src_vocab)
+
+print trg_vocab.itos
 
 src = []
 with open("cmudict.words.tst" ,'r') as wrds:
   for line in wrds:
-    src.append([int(src_vocab.stoi[char]) for char in line.strip().split(" ") if char in src_vocab.stoi.keys()] )
+    src.append(torch.LongTensor([int(src_vocab.stoi[char]) for char in line.strip().split(" ") if char in src_vocab.stoi.keys()] ))
 trg = []
 with open("cmudict.phoneme.tst" ,'r') as wrds:
   for line in wrds:
-    trg.append([int(trg_vocab.stoi[char]) for char in line.strip().split(" ")] )
+    trg.append(torch.LongTensor([int(trg_vocab.stoi[char]) for char in line.strip().split(" ")] ))
+    
 epochId = 13
 prob = '4.51'
 
-nmt = torch.load(open('modeldump.nll_' + prob + '.epoch_' + str(epochId), 'rb'), pickle_module=dill)
+nmt = torch.load(open('modeldump.nll_' + prob + '.epoch_' + str(epochId), 'rb'), pickle_module=dill, map_location=lambda storage, loc: storage)
 results = []
-for src, trg in zip(src_test,trg_test):
+for src, trg in zip(src,trg):
   results.append(nmt(Variable(src.unsqueeze(1)), Variable(trg.unsqueeze(1))).squeeze(0))
 
 s = ""
 for sent in results:
+  s = ""
   for word in np.argmax(sent.data.numpy(),axis=0):
     s += trg_vocab.itos[word] + " "
   print s

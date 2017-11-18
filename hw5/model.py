@@ -4,124 +4,98 @@ from torch.autograd import Variable
 from torch.nn import Parameter
 import numpy as np
 import math
+import torch.nn.functional as F
 
 # TODO: Your implementation goes here
 class Encoder(nn.Module):
   def __init__(self, vocab_size):
     super(Encoder, self).__init__()
-    
-    self.initParams = torch.load(open("model.param", "rb"))
-    
-    
-    self.embedding = torch.nn.Embedding(36616, 300)
-    self.embedding.weight.data = self.initParams["encoder.embeddings.emb_luts.0.weight"]
-    
-    self.lstm = torch.nn.LSTM(input_size=300, hidden_size=512, num_layers=1, bidirectional=True)
-    
-    self.lstm.weight_ih_l0.data = self.initParams["encoder.rnn.weight_ih_l0"]
-    self.lstm.weight_hh_l0.data = self.initParams["encoder.rnn.weight_hh_l0"]
-    self.lstm.bias_ih_l0.data = self.initParams["encoder.rnn.bias_ih_l0"]
-    self.lstm.bias_hh_l0.data = self.initParams["encoder.rnn.bias_hh_l0"]
-    
-    self.lstm.weight_ih_l0_reverse.data = self.initParams["encoder.rnn.weight_ih_l0_reverse"]
-    self.lstm.weight_hh_l0_reverse.data = self.initParams["encoder.rnn.weight_hh_l0_reverse"]
-    self.lstm.bias_ih_l0_reverse.data = self.initParams["encoder.rnn.bias_ih_l0_reverse"]
-    self.lstm.bias_hh_l0_reverse.data = self.initParams["encoder.rnn.bias_hh_l0_reverse"]
-    
-    self.hidden = None
-    
+
+    self.embedding = torch.nn.Embedding(vocab_size, 300).cuda()
+
+    self.lstm = torch.nn.LSTM(input_size=300, hidden_size=512, num_layers=1, bidirectional=True).cuda()
+
 
   def forward(self, input):
     embedded = self.embedding(input)
     output = embedded
-    output, self.hidden = self.lstm(output, self.hidden)
-    return output, self.hidden
-
+    output, hidden = self.lstm(output, None)
+    return output, hidden
 
 class Decoder(nn.Module):
-  def __init__(self):
+  def _init_state(self, encoder_hidden):
+    if encoder_hidden is None:
+      return None
+    if isinstance(encoder_hidden, tuple):
+      encoder_hidden = tuple([self._cat_directions(h) for h in encoder_hidden])
+    else:
+      encoder_hidden = self._cat_directions(encoder_hidden)
+    return encoder_hidden
+    
+  def _cat_directions(self, h):
+    h = torch.cat([h[0:h.size(0):2], h[1:h.size(0):2]], 2)
+    return h
+
+  def __init__(self, src_vocab_size, trg_vocab_size):
     super(Decoder, self).__init__()
     
-    self.initParams = torch.load(open("model.param", "rb"))
+    self.hidden_size = 1024
+    self.output_size = trg_vocab_size
     
-    self.embedding = torch.nn.Embedding(23262, 300)
-    self.embedding.weight.data = self.initParams["decoder.embeddings.emb_luts.0.weight"]
+    #self.initParams = torch.load(open("model.param", "rb"))
     
-    self.attin = torch.nn.Linear(1024, 1024)
-    self.attin.weight.data = self.initParams["decoder.attn.linear_in.weight"]
+    self.embedding = torch.nn.Embedding(trg_vocab_size, 300).cuda()
     
-    self.softmax = nn.LogSoftmax()
+    self.attin = torch.nn.Linear(self.hidden_size, self.hidden_size).cuda()
     
-    self.attout = torch.nn.Linear(2048, 1024)
-    self.attout.weight.data = self.initParams["decoder.attn.linear_out.weight"]
+    self.attout = torch.nn.Linear(2048, self.hidden_size).cuda()
     
     
-    self.lstm = torch.nn.LSTM(input_size=1324, hidden_size=1024, num_layers=1)
+    self.lstm = torch.nn.LSTM(input_size=300, hidden_size=self.hidden_size, num_layers=1).cuda()
     
-    self.lstm.weight_ih_l0.data = self.initParams["decoder.rnn.layers.0.weight_ih"]
-    self.lstm.weight_hh_l0.data = self.initParams["decoder.rnn.layers.0.weight_hh"]
-    self.lstm.bias_ih_l0.data = self.initParams["decoder.rnn.layers.0.bias_ih"]
-    self.lstm.bias_hh_l0.data = self.initParams["decoder.rnn.layers.0.bias_hh"]
-    
-    
-    self.gen = torch.nn.Linear(23262, 1024)
-    self.gen.weight.data = self.initParams["0.weight"]
-    self.gen.bias.data = self.initParams["0.bias"]
-    
-    self.hidden = Parameter(torch.randn((48, 1, 1024)))
+    #23262
+    self.gen = torch.nn.Linear(self.hidden_size,trg_vocab_size).cuda()
     
 
-  def forward(self, targ, encoder_out):
-    self.hidden = Parameter(torch.randn((48, len(encoder_out), 1024)))
+  def forward(self, targ, encoder_out, encoder_hidden):
     embedded = self.embedding(targ)
-    output = embedded
-    #print hidden
-    #hidden = torch.cat((hidden[0], hidden[1]), 2)[0]
     
-    #sc = Variable(torch.zeros((len(encoder_out),)))
-    #for i in range(len(encoder_out)):
-    #  sc[i] = self.score(encoder_out[i], self.hidden)
-    sc = self.score(encoder_out, self.hidden)
-    a = self.softmax(sc)#.unsqueeze(2)
-    mult = torch.mul(a.unsqueeze(2), encoder_out)
-    print mult
-    s = torch.sum(mult, 0)
-    #print s
-    #print s
-    context = torch.tanh(self.attout(torch.cat((s, hidden), 2)))
-#1 seq 48
-#1 48 1024
+    decoder_hidden = self._init_state(encoder_hidden)
 
-#48 1024
-    output = torch.cat((context, embedded), 2)
+    output, hidden = self.lstm(embedded, decoder_hidden)
+
+    context = encoder_out.transpose(0,1)
+    output = output.transpose(0,1)
+    batch_size = output.size(0)
+    hidden_size = output.size(2)
+    input_size = context.size(1)
     
-    output, hiddenN = self.lstm(score, hidden)
+    #output, attn = self.attention(output, encoder_outputs)
+    # (batch, out_len, dim) * (batch, in_len, dim) -> (batch, out_len, in_len)
+    attn = torch.bmm(output, context.transpose(1, 2))
+    attn = F.softmax(attn.view(-1, input_size)).view(batch_size, -1, input_size)
+
+    # (batch, out_len, in_len) * (batch, in_len, dim) -> (batch, out_len, dim)
+    mix = torch.bmm(attn, context)
+
+    # concat -> (batch, out_len, 2*dim)
+    combined = torch.cat((mix, output), dim=2)
+    # output -> (batch, out_len, dim)
+    output = F.tanh(self.attout(combined.view(-1, 2 * hidden_size))).view(batch_size, -1, hidden_size)
     
-    generated = self.gen(output)
-    return generated, hiddenN
-  
-  def score(self, h_s, h_t):
-    #seqlen = len(h_s)
-    h_t = self.attin(h_t)
-    #h_t = h_t_.view(48, seqlen, 1024)
-    print h_t
-    return torch.bmm(h_t, h_s.transpose(0,1))
-    #= self.attin(encoder_out)
-    #sc = Variable(torch.zeros(48))
-    #for i in range(48):
-    #  sc[i] = torch.dot(hidden[i], score[i])
-    #return self.hidden.dot(score)
-    
+    #print output
+    predicted_softmax = F.log_softmax(self.gen(output.view(-1, self.hidden_size))).view(batch_size, self.output_size, -1)
+    return predicted_softmax#, hidden, attn
+
     
 class NMT(nn.Module):
-  def __init__(self, vocab_size):
+  def __init__(self, src_vocab_size, trg_vocab_size):
     super(NMT, self).__init__()
-    self.Encoder = Encoder(vocab_size)
-    self.Decoder = Decoder()
-    self.enchidden = None
+    self.Encoder = Encoder(src_vocab_size)
+    self.Decoder = Decoder(src_vocab_size, trg_vocab_size)
 
   def forward(self, input, targ):
     
-    encout, self.enchidden = self.Encoder(input)
+    encout, hidden = self.Encoder(input)
     
-    return self.Decoder.forward(targ, encout)
+    return self.Decoder(targ, encout, hidden)

@@ -9,7 +9,7 @@ import torch
 from torch import cuda
 from torch.autograd import Variable
 
-from modelgary2 import NMT
+from model import NMT
 #python train.py --data_file hw5 --model_file modeldump.model --optimizer Adam -lr 1e-2 --batch_size 48
 
 #python train.py --data_file hw5  --src_lang words --trg_lang phoneme --model_file modeldump --optimizer Adam -lr 1e-2 --batch_size 48
