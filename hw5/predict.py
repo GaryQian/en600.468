@@ -15,22 +15,29 @@ import numpy as np
 from modelgary2 import NMT
 
 
-src_train, src_dev, src_test, src_vocab = torch.load(open('hw5.words', 'rb'))
-trg_train, trg_dev, trg_test, trg_vocab = torch.load(open('hw5.phoneme', 'rb'))
+_,_,_, src_vocab = torch.load(open('hw5.words', 'rb'))
+_, _,_, trg_vocab = torch.load(open('hw5.phoneme', 'rb'))
 
-src_train, src_dev, src_test = src_train[:-1], src_dev[:-1], src_test[:-1]
-trg_train, trg_dev, trg_test = trg_train[1:], trg_dev[1:], trg_test[1:]
+#src_train, src_dev, src_test = src_train[:-1], src_dev[:-1], src_test[:-1]
+#trg_train, trg_dev, trg_test = trg_train[1:], trg_dev[1:], trg_test[1:]
 
 trg_vocab_size = len(trg_vocab)
 src_vocab_size = len(src_vocab)
 
-
+src = []
+with open("cmudict.words.tst" ,'r') as wrds:
+  for line in wrds:
+    src.append([int(src_vocab.stoi[char]) for char in line.strip().split(" ") if char in src_vocab.stoi.keys()] )
+trg = []
+with open("cmudict.phoneme.tst" ,'r') as wrds:
+  for line in wrds:
+    trg.append([int(trg_vocab.stoi[char]) for char in line.strip().split(" ")] )
 epochId = 13
 prob = '4.51'
 
 nmt = torch.load(open('modeldump.nll_' + prob + '.epoch_' + str(epochId), 'rb'), pickle_module=dill)
 results = []
-for src, trg in zip(src_test,trg_test)[:5]:
+for src, trg in zip(src_test,trg_test):
   results.append(nmt(Variable(src.unsqueeze(1)), Variable(trg.unsqueeze(1))).squeeze(0))
 
 s = ""
