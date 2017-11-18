@@ -102,6 +102,7 @@ def main(options):
       optimizer.zero_grad()
       loss.backward(retain_graph=True)
       optimizer.step()
+      break
 
     # validation -- this is a crude esitmation because there might be some paddings at the end
     dev_loss = 0.0
@@ -116,7 +117,7 @@ def main(options):
         dev_src_mask = dev_src_mask.cuda()
         dev_trg_mask = dev_trg_mask.cuda()
 
-      sys_out_batch = nmt(dev_src_batch)  # (trg_seq_len, batch_size, trg_vocab_size) # TODO: add more arguments as necessary 
+      sys_out_batch = nmt(dev_src_batch, Variable(torch.zeros(dev_trg_batch.size()).long()))  # (trg_seq_len, batch_size, trg_vocab_size) # TODO: add more arguments as necessary 
       dev_trg_mask = dev_trg_mask.view(-1)
       dev_trg_batch = dev_trg_batch.view(-1)
       dev_trg_batch = dev_trg_batch.masked_select(dev_trg_mask)
@@ -126,7 +127,8 @@ def main(options):
       loss = criterion(sys_out_batch, dev_trg_batch)
       logging.debug("dev loss at batch {0}: {1}".format(batch_i, loss.data[0]))
       dev_loss += loss
-    dev_avg_loss = dev_loss / len(batched_dev_in)
+      break
+    dev_avg_loss = dev_loss / len(batched_dev_src)
     logging.info("Average loss value per instance is {0} at the end of epoch {1}".format(dev_avg_loss.data[0], epoch_i))
 
     if (last_dev_avg_loss - dev_avg_loss).data[0] < options.estop:
