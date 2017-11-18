@@ -25,8 +25,8 @@ trg_vocab_size = len(trg_vocab)
 src_vocab_size = len(src_vocab)
 
 
-epochId = 0
-prob = '0.03'
+epochId = 13
+prob = '4.51'
 
 nmt = torch.load(open('modeldump.nll_' + prob + '.epoch_' + str(epochId), 'rb'), pickle_module=dill)
 results = []

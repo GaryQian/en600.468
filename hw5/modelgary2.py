@@ -11,9 +11,9 @@ class Encoder(nn.Module):
   def __init__(self, vocab_size):
     super(Encoder, self).__init__()
 
-    self.embedding = torch.nn.Embedding(vocab_size, 300)
+    self.embedding = torch.nn.Embedding(vocab_size, 300).cuda()
 
-    self.lstm = torch.nn.LSTM(input_size=300, hidden_size=512, num_layers=1, bidirectional=True)
+    self.lstm = torch.nn.LSTM(input_size=300, hidden_size=512, num_layers=1, bidirectional=True).cuda()
 
 
   def forward(self, input):
@@ -42,19 +42,19 @@ class Decoder(nn.Module):
     self.hidden_size = 1024
     self.output_size = trg_vocab_size
     
-    self.initParams = torch.load(open("model.param", "rb"))
+    #self.initParams = torch.load(open("model.param", "rb"))
     
-    self.embedding = torch.nn.Embedding(trg_vocab_size, 300)
+    self.embedding = torch.nn.Embedding(trg_vocab_size, 300).cuda()
     
-    self.attin = torch.nn.Linear(self.hidden_size, self.hidden_size)
+    self.attin = torch.nn.Linear(self.hidden_size, self.hidden_size).cuda()
     
-    self.attout = torch.nn.Linear(2048, self.hidden_size)
+    self.attout = torch.nn.Linear(2048, self.hidden_size).cuda()
     
     
-    self.lstm = torch.nn.LSTM(input_size=300, hidden_size=self.hidden_size, num_layers=1)
+    self.lstm = torch.nn.LSTM(input_size=300, hidden_size=self.hidden_size, num_layers=1).cuda()
     
     #23262
-    self.gen = torch.nn.Linear(self.hidden_size,trg_vocab_size)
+    self.gen = torch.nn.Linear(self.hidden_size,trg_vocab_size).cuda()
     
 
   def forward(self, targ, encoder_out, encoder_hidden):
